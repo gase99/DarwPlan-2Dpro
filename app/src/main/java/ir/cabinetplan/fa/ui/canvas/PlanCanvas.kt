@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -62,7 +63,7 @@ fun PlanCanvas(state: EditorState, send: (CanvasIntent) -> Unit, modifier: Modif
             textAlign = Paint.Align.CENTER; typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         }
     }
-    Canvas(modifier.background(colors.background).onGloballyPositioned { onBounds(it.boundsInRoot()) }
+    Canvas(modifier.clipToBounds().background(colors.background).onGloballyPositioned { onBounds(it.boundsInRoot()) }
         .semantics { contentDescription = description; stateDescription = zoomDescription }
         .pointerInput(Unit) {
             awaitEachGesture {
@@ -70,6 +71,7 @@ fun PlanCanvas(state: EditorState, send: (CanvasIntent) -> Unit, modifier: Modif
                 down.consume()
                 var transformed = false
                 var finished = false
+                var moved = false
                 fun world(offset: Offset): Point = current.viewport.screenToWorld(
                     Point(offset.x, offset.y), Point(size.width / 2f, size.height / 2f))
                 val tolerance = 18f * density / current.viewport.pixelsPerMillimeter
@@ -89,7 +91,10 @@ fun PlanCanvas(state: EditorState, send: (CanvasIntent) -> Unit, modifier: Modif
                             currentSend(CanvasIntent.Transform(Point(), Point(pan.x, pan.y), 1f))
                         } else if (!transformed) {
                             val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change != null) currentSend(CanvasIntent.Drag(world(change.position), tolerance))
+                            if (change != null) {
+                                moved = moved || (change.position - down.position).getDistance() > viewConfiguration.touchSlop
+                                if (moved) currentSend(CanvasIntent.Drag(world(change.position), tolerance))
+                            }
                         }
                         event.changes.forEach { it.consume() }
                         if (pressed == 0) {

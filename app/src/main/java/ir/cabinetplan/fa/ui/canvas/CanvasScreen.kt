@@ -10,8 +10,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import ir.cabinetplan.fa.export.ExportFormat
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -61,7 +59,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            Column {
+            Column(if (compact) Modifier.statusBarsPadding() else Modifier) {
                 if (!compact) TopAppBar(title = {
                     Column {
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
