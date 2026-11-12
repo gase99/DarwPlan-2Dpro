@@ -32,7 +32,7 @@ class CanvasViewModelTest {
     private val exporter = object : PlanExport {
         override suspend fun write(uri: Uri, document: PlanDocument, title: String, format: ExportFormat) = Unit
     }
-    private fun model() = CanvasViewModel(store, exporter).also { models.put("model", it) }
+    private fun model() = CanvasViewModel(store, exporter, dispatcher).also { models.put("model", it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun cleanup() { models.clear(); Dispatchers.resetMain() }
 

@@ -10,7 +10,8 @@ import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
+import ir.cabinetplan.fa.di.DocumentDispatcher
 import kotlinx.coroutines.withContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.cabinetplan.fa.domain.*
@@ -88,6 +89,7 @@ sealed interface CanvasIntent {
 class CanvasViewModel @Inject constructor(
     private val store: ProjectStore,
     private val exporter: PlanExport,
+    @DocumentDispatcher private val documentDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(CanvasState())
     val state = mutableState.asStateFlow()
@@ -117,7 +119,7 @@ class CanvasViewModel @Inject constructor(
         } else if (action is PendingOpen.Load) {
             task(R.string.load_failed) {
                 val entity = requireNotNull(store.load(action.id))
-                val document = withContext(Dispatchers.Default) { DocumentCodec.decode(entity.documentJson) }
+                val document = withContext(documentDispatcher) { DocumentCodec.decode(entity.documentJson) }
                 mutableState.update { it.copy(editor = EditorState(document = document), projectId = entity.id,
                     projectName = entity.name, savedDocument = document, browser = false,
                     pendingDiscard = null, message = R.string.loaded) }
@@ -134,7 +136,7 @@ class CanvasViewModel @Inject constructor(
                 val snapshot = state.value
                 val id = if (intent.copy) UUID.randomUUID().toString() else snapshot.projectId ?: UUID.randomUUID().toString()
                 task(R.string.save_failed) {
-                    val json = withContext(Dispatchers.Default) { DocumentCodec.encode(snapshot.editor.document) }
+                    val json = withContext(documentDispatcher) { DocumentCodec.encode(snapshot.editor.document) }
                     store.save(ProjectEntity(id, name, json, System.currentTimeMillis()))
                     mutableState.update { it.copy(projectId = id, projectName = name, savedDocument = snapshot.editor.document,
                         saveDialog = false, message = R.string.saved) }

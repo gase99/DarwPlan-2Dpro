@@ -79,3 +79,10 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
+
+// Robolectric's Android runtime is fetched from the same reliable Maven Central host as Gradle.
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "2g"
+    systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+    testLogging { events("failed", "skipped") }
+}
