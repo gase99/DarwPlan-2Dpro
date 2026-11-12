@@ -36,7 +36,7 @@ fun toEnglishDigits(value: String): String = value.trim().map { ch ->
     }
 }.joinToString("").replace("٬", "").replace(",", "")
 
-/** Parses a centimeter value entered in Persian, Arabic, or English digits within [minCm..maxCm]. */
+/** Parses a centimeter value entered in Persian, Arabic, or English digits within minCm to maxCm. */
 fun parseCentimeters(
     text: String,
     minCm: Float = 1f,
@@ -73,7 +73,7 @@ fun formatMeters(cm: Float, includeSuffix: Boolean = true): String {
     return if (includeSuffix) "$persian متر طول" else "$persian متر"
 }
 
-/** Formats degree angles normalized to [0..359] in Persian digits. */
+/** Formats degree angles normalized to 0..359 in Persian digits. */
 fun formatAngle(deg: Float): String {
     val normalized = ((deg.roundToInt() % 360) + 360) % 360
     return "${toPersianDigits(normalized)}°"
