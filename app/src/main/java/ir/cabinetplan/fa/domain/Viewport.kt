@@ -32,7 +32,7 @@ data class Viewport(val zoom: Float = 1f, val pan: Point = Point()) {
 
     companion object {
         const val BASE_PIXELS_PER_MM = 2f
-        const val MIN_ZOOM = 0.25f
+        const val MIN_ZOOM = 0.05f
         const val MAX_ZOOM = 8f
         const val GRID_MILLIMETERS = 50
     }

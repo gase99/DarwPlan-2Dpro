@@ -108,7 +108,7 @@ fun PlanCanvas(state: EditorState, send: (CanvasIntent) -> Unit, modifier: Modif
         fun screen(point: Point): Offset = viewport.worldToScreen(point, center).let { Offset(it.x, it.y) }
         val topLeft = viewport.screenToWorld(Point(), center)
         val bottomRight = viewport.screenToWorld(Point(size.width, size.height), center)
-        val step = Viewport.GRID_MILLIMETERS.toFloat()
+        val step = if (viewport.zoom < .15f) 250f else Viewport.GRID_MILLIMETERS.toFloat()
         for (index in floor(topLeft.x / step).toInt()..ceil(bottomRight.x / step).toInt()) {
             val x = screen(Point(index * step, 0f)).x
             drawLine(colors.outlineVariant, Offset(x, 0f), Offset(x, size.height), density)

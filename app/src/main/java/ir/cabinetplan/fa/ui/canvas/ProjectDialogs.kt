@@ -9,12 +9,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ir.cabinetplan.fa.R
+import ir.cabinetplan.fa.domain.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun ProjectDialogs(state: CanvasState, send: (CanvasIntent) -> Unit) {
+    if (state.sizeDialog) {
+        val lines = state.editor.document.lines.filter { it.id in state.editor.selected }
+        val single = lines.singleOrNull()?.takeIf { it.group == null }
+        val bounds = PlanDocument(lines).bounds
+        var first by remember { mutableStateOf((single?.length ?: bounds?.width ?: 0f).millimeters()) }
+        var second by remember { mutableStateOf((bounds?.height ?: 0f).millimeters()) }
+        val a = parseMillimeters(first)
+        val b = if (single == null) parseMillimeters(second) else null
+        AlertDialog(onDismissRequest = { send(CanvasIntent.DismissSize) }, title = { Text(stringResource(R.string.edit_size)) },
+            text = { Column {
+                OutlinedTextField(first, { first = it }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    label = { Text(stringResource(if (single != null) R.string.line_length else R.string.selection_width)) })
+                if (single == null) OutlinedTextField(second, { second = it }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), label = { Text(stringResource(R.string.selection_depth)) })
+                Text(stringResource(R.string.size_hint), style = MaterialTheme.typography.labelSmall)
+            } },
+            confirmButton = { TextButton(onClick = { if (a != null) send(CanvasIntent.Resize(a, b)) },
+                enabled = a != null && (single != null || (b != null && (bounds?.width ?: 0f) > 0 && (bounds?.height ?: 0f) > 0))) {
+                Text(stringResource(R.string.apply_size))
+            } }, dismissButton = { TextButton(onClick = { send(CanvasIntent.DismissSize) }) { Text(stringResource(R.string.cancel)) } })
+    }
     if (state.saveDialog) {
         var name by remember { mutableStateOf(state.projectName) }
         var copy by remember { mutableStateOf(false) }

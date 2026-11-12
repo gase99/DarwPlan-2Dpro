@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import ir.cabinetplan.fa.export.ExportFormat
@@ -40,6 +41,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val send = viewModel::onIntent
     val editor = state.editor
+    val compact = LocalConfiguration.current.screenHeightDp < 480
     var canvasBounds by remember { mutableStateOf(Rect.Zero) }
     val snackbar = remember { SnackbarHostState() }
     val defaultName = stringResource(R.string.project_title)
@@ -60,7 +62,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             Column {
-                TopAppBar(title = {
+                if (!compact) TopAppBar(title = {
                     Column {
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
                         Text(state.projectName.ifBlank { defaultName } + if (state.dirty) stringResource(R.string.unsaved_mark) else "",
@@ -72,6 +74,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                     TextButton(onClick = { send(CanvasIntent.NewProject) }) { Text(stringResource(R.string.new_project)) }
                     TextButton(onClick = { send(CanvasIntent.RequestSave) }) { Text(stringResource(R.string.save)) }
+                    if (compact) TextButton(onClick = { send(CanvasIntent.ShowHelp) }) { Text(stringResource(R.string.help)) }
                     TextButton(onClick = { send(CanvasIntent.Browse) }) { Text(stringResource(R.string.projects)) }
                     TextButton(onClick = { png.launch("${state.projectName.ifBlank { defaultName }}.png") }, enabled = editor.document.lines.isNotEmpty()) { Text(stringResource(R.string.export_png)) }
                     TextButton(onClick = { pdf.launch("${state.projectName.ifBlank { defaultName }}.pdf") }, enabled = editor.document.lines.isNotEmpty()) { Text(stringResource(R.string.export_pdf)) }
@@ -90,7 +93,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
                         label = { Text(stringResource(R.string.library)) })
                 }
                 if (state.libraryVisible) {
-                    Text(stringResource(R.string.library_hint), Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
+                    if (!compact) Text(stringResource(R.string.library_hint), Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
                     Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         CabinetKind.entries.forEach { kind ->
                             LibraryCard(kind, editor.tool == Tool.PLACE && editor.cabinet == kind,
@@ -112,6 +115,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { send(CanvasIntent.Undo) }, enabled = editor.past.isNotEmpty()) { Text(stringResource(R.string.undo)) }
                         TextButton(onClick = { send(CanvasIntent.Redo) }, enabled = editor.future.isNotEmpty()) { Text(stringResource(R.string.redo)) }
+                        TextButton(onClick = { send(CanvasIntent.EditSize) }, enabled = editor.selected.isNotEmpty()) { Text(stringResource(R.string.edit_size)) }
                         TextButton(onClick = { send(CanvasIntent.Delete) }, enabled = editor.selected.isNotEmpty()) { Text(stringResource(R.string.delete_selected)) }
                         FilterChip(selected = editor.multiple, onClick = { send(CanvasIntent.ToggleMultiple) }, label = { Text(stringResource(R.string.multiple)) })
                         Spacer(Modifier.width(8.dp))

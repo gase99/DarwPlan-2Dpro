@@ -10,6 +10,8 @@ import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.cabinetplan.fa.domain.*
 import javax.inject.Inject
@@ -26,6 +28,7 @@ data class CanvasState(
     val savedDocument: PlanDocument = PlanDocument(),
     val projects: List<ProjectEntity> = emptyList(),
     val saveDialog: Boolean = false,
+    val sizeDialog: Boolean = false,
     val browser: Boolean = false,
     val pendingDiscard: PendingOpen? = null,
     val pendingDelete: String? = null,
@@ -42,6 +45,9 @@ sealed interface PendingOpen {
 }
 
 sealed interface CanvasIntent {
+    data object EditSize : CanvasIntent
+    data object DismissSize : CanvasIntent
+    data class Resize(val first: Float, val second: Float?) : CanvasIntent
     data object RequestSave : CanvasIntent
     data object DismissSave : CanvasIntent
     data class Save(val name: String, val copy: Boolean = false) : CanvasIntent
@@ -111,7 +117,7 @@ class CanvasViewModel @Inject constructor(
         } else if (action is PendingOpen.Load) {
             task(R.string.load_failed) {
                 val entity = requireNotNull(store.load(action.id))
-                val document = DocumentCodec.decode(entity.documentJson)
+                val document = withContext(Dispatchers.Default) { DocumentCodec.decode(entity.documentJson) }
                 mutableState.update { it.copy(editor = EditorState(document = document), projectId = entity.id,
                     projectName = entity.name, savedDocument = document, browser = false,
                     pendingDiscard = null, message = R.string.loaded) }
@@ -128,7 +134,8 @@ class CanvasViewModel @Inject constructor(
                 val snapshot = state.value
                 val id = if (intent.copy) UUID.randomUUID().toString() else snapshot.projectId ?: UUID.randomUUID().toString()
                 task(R.string.save_failed) {
-                    store.save(ProjectEntity(id, name, DocumentCodec.encode(snapshot.editor.document), System.currentTimeMillis()))
+                    val json = withContext(Dispatchers.Default) { DocumentCodec.encode(snapshot.editor.document) }
+                    store.save(ProjectEntity(id, name, json, System.currentTimeMillis()))
                     mutableState.update { it.copy(projectId = id, projectName = name, savedDocument = snapshot.editor.document,
                         saveDialog = false, message = R.string.saved) }
                 }
@@ -169,6 +176,12 @@ class CanvasViewModel @Inject constructor(
         mutableState.update { state ->
             val editor = state.editor
             when (intent) {
+                CanvasIntent.EditSize -> state.copy(sizeDialog = true, editor = editor.copy(gesture = null, snap = null))
+                CanvasIntent.DismissSize -> state.copy(sizeDialog = false)
+                is CanvasIntent.Resize -> state.copy(sizeDialog = false, editor = if (intent.second == null)
+                    editor.resizeLength(intent.first) else editor.resizeBounds(intent.first, intent.second))
+                is CanvasIntent.ChooseCabinet -> state.copy(libraryVisible = false, editor = editor.copy(cabinet = intent.kind, tool = Tool.PLACE, gesture = null))
+                is CanvasIntent.Place -> state.copy(libraryVisible = false, editor = editor.place(intent.kind, intent.point))
                 CanvasIntent.RequestSave -> state.copy(saveDialog = true, editor = editor.copy(gesture = null, snap = null))
                 CanvasIntent.DismissSave -> state.copy(saveDialog = false)
                 CanvasIntent.Browse -> state.copy(browser = true, editor = editor.copy(gesture = null, snap = null))
