@@ -1,5 +1,11 @@
 package ir.cabinetplan.fa.ui.canvas
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import ir.cabinetplan.fa.export.ExportFormat
@@ -37,6 +43,9 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
     var canvasBounds by remember { mutableStateOf(Rect.Zero) }
     val snackbar = remember { SnackbarHostState() }
     val defaultName = stringResource(R.string.project_title)
+    val context = LocalContext.current
+    var exitPrompt by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = state.dirty && !state.busy) { exitPrompt = true }
     val message = state.message?.let { stringResource(it) }
     LaunchedEffect(message) {
         if (message != null) { snackbar.showSnackbar(message); send(CanvasIntent.ClearMessage) }
@@ -134,6 +143,10 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
         }
     }
     ProjectDialogs(state, send)
+    if (exitPrompt) AlertDialog(onDismissRequest = { exitPrompt = false },
+        title = { Text(stringResource(R.string.unsaved_title)) }, text = { Text(stringResource(R.string.exit_unsaved)) },
+        confirmButton = { TextButton(onClick = { context.activity()?.finish() }) { Text(stringResource(R.string.exit)) } },
+        dismissButton = { TextButton(onClick = { exitPrompt = false }) { Text(stringResource(R.string.cancel)) } })
     if (state.busy) AlertDialog(onDismissRequest = {},
         text = { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator(Modifier.size(32.dp)); Text(stringResource(R.string.please_wait))
@@ -172,4 +185,10 @@ private fun LibraryCard(kind: CabinetKind, selected: Boolean, onClick: () -> Uni
                 style = MaterialTheme.typography.labelSmall)
         }
     }
+}
+
+private fun Context.activity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.activity()
+    else -> null
 }

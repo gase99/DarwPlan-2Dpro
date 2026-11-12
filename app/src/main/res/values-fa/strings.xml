@@ -76,4 +76,6 @@
     <string name="export_pdf">خروجی پی‌دی‌اف</string>
     <string name="please_wait">در حال انجام؛ لطفاً صبر کنید…</string>
     <string name="unsaved_mark"> • ذخیره‌نشده</string>
+    <string name="exit_unsaved">تغییرات فعلی ذخیره نشده‌اند. برای نگهداری طرح، انصراف بزنید و آن را ذخیره کنید.</string>
+    <string name="exit">خروج بدون ذخیره</string>
 </resources>

@@ -35,6 +35,9 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 fun Number.fa(): String = toString().map { if (it in '0'..'9') '۰' + (it - '0') else it }.joinToString("")
+fun Float.millimeters(): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.forLanguageTag("fa")).apply {
+    maximumFractionDigits = 1
+}.format(this)
 fun cabinetLabel(kind: CabinetKind): Int = when (kind) {
     CabinetKind.BASE -> R.string.cabinet_base
     CabinetKind.WALL -> R.string.cabinet_wall
@@ -127,7 +130,7 @@ fun PlanCanvas(state: EditorState, send: (CanvasIntent) -> Unit, modifier: Modif
                 drawCircle(colors.tertiary, 7f * density, b)
             }
             if (state.dimensions && line.group == null && (a - b).getDistance() > 55 * density) {
-                drawContext.canvas.nativeCanvas.drawText("${line.length.roundToInt().fa()} $unit",
+                drawContext.canvas.nativeCanvas.drawText("${line.length.millimeters()} $unit",
                     (a.x + b.x) / 2, (a.y + b.y) / 2 - 9 * density, textPaint)
             }
         }
@@ -137,7 +140,7 @@ fun PlanCanvas(state: EditorState, send: (CanvasIntent) -> Unit, modifier: Modif
             if (bounds.width * viewport.pixelsPerMillimeter > 75f * density) {
                 drawContext.canvas.nativeCanvas.drawText(labels[lines.first().kind].orEmpty(), location.x, location.y, textPaint)
                 if (state.dimensions) drawContext.canvas.nativeCanvas.drawText(
-                    "${bounds.width.roundToInt().fa()} × ${bounds.height.roundToInt().fa()} $unit",
+                    "${bounds.width.millimeters()} × ${bounds.height.millimeters()} $unit",
                     location.x, location.y + 18f * density, textPaint)
             }
         }

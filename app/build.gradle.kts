@@ -14,8 +14,8 @@ android {
         applicationId = "ir.cabinetplan.fa"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.0-preview.1"
+        versionCode = providers.environmentVariable("CABINET_VERSION_CODE").orElse("2").get().toInt()
+        versionName = providers.environmentVariable("CABINET_VERSION").orElse("0.1.0-preview.1").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fa")
     }

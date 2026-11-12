@@ -51,7 +51,7 @@ class StorageExportTest {
         val pdf = File(context.cacheDir, "test.pdf")
         try {
             exporter.write(Uri.fromFile(png), document, "طرح آزمایشی", ExportFormat.PNG)
-            val image = BitmapFactory.decodeFile(png.path)
+            val image = requireNotNull(BitmapFactory.decodeFile(png.path))
             assertNotNull(image); assertEquals(2048, image.width); assertEquals(2048, image.height)
             image.recycle()
             exporter.write(Uri.fromFile(pdf), document, "طرح آزمایشی", ExportFormat.PDF)

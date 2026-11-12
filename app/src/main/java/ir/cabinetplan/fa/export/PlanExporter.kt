@@ -89,5 +89,5 @@ class AndroidPlanExporter @Inject constructor(@ApplicationContext private val co
                 center.x, center.y + 13f * factor, paint)
         }
     }
-    private fun number(value: Float): String = String.format(Locale.forLanguageTag("fa"), "%d", value.roundToInt())
+    private fun number(value: Float): String = java.text.NumberFormat.getNumberInstance(Locale.forLanguageTag("fa")).apply { maximumFractionDigits = 1 }.format(value)
 }

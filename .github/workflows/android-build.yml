@@ -55,20 +55,7 @@ jobs:
       - name: Set up Gradle and validate wrapper
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Test, lint and assemble
-        shell: bash
-        run: |
-          set +e
-          ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log"
-          result=${PIPESTATUS[0]}
-          if [ "$result" -ne 0 ]; then
-            # Make diagnostics accessible through the Checks API as well as raw logs.
-            message=$( { grep -E "^e:|^\* What went wrong:|^> |^.*error:|FAILED|tests completed" "$RUNNER_TEMP/gradle.log" | head -60; tail -50 "$RUNNER_TEMP/gradle.log"; } )
-            message="${message//'%'/'%25'}"
-            message="${message//$'\r'/'%0D'}"
-            message="${message//$'\n'/'%0A'}"
-            echo "::error title=Gradle build failed::$message"
-          fi
-          exit "$result"
+        run: bash .github/scripts/gradle-check.sh testDebugUnitTest lintDebug assembleDebug
       - name: Upload installable APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
