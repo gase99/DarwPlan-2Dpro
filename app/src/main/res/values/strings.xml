@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">کابینت‌پلن</string>
+    <string name="project_title">طرح تازه</string>
+    <string name="phase_label">فاز ۱ · بوم طراحی</string>
+    <string name="canvas_title">بوم دوبعدی طراحی کابینت</string>
+    <string name="canvas_description">با کشیدن انگشت، بوم را جابه‌جا کنید. با دو انگشت بزرگ‌نمایی کنید.</string>
+    <string name="canvas_state">بزرگ‌نمایی %1$s درصد</string>
+    <string name="zoom_value">%1$s٪</string>
+    <string name="zoom_in">بزرگ‌نمایی</string>
+    <string name="zoom_out">کوچک‌نمایی</string>
+    <string name="reset_view">بازنشانی نما</string>
+    <string name="reset_symbol">⌂</string>
+    <string name="zoom_in_symbol">+</string>
+    <string name="zoom_out_symbol">−</string>
+    <string name="help">راهنمای بوم</string>
+    <string name="help_symbol">؟</string>
+    <string name="help_title">شروع طراحی</string>
+    <string name="help_body">برای جابه‌جایی بوم، یک انگشت را روی آن بکشید. برای بزرگ‌نمایی یا کوچک‌نمایی، دو انگشت را باز یا بسته کنید. دکمهٔ خانه نما را به مرکز بازمی‌گرداند.\n\nراست‌به‌چپ بودن رابط، جهت حرکت دست روی بوم را معکوس نمی‌کند.\n\nاین نسخه فقط بوم و زیرساخت اولیه را دارد؛ رسم خطوط، کتابخانهٔ کابینت، ذخیره و خروجی در فازهای بعد اضافه می‌شوند.</string>
+    <string name="understood">متوجه شدم</string>
+    <string name="gesture_hint">کشیدن برای جابه‌جایی · دو انگشت برای بزرگ‌نمایی</string>
+    <string name="grid_hint">فاصلهٔ شبکه: %1$s میلی‌متر</string>
+    <string name="origin_label">مبدأ</string>
+    <string name="phase_notice">ابزارهای رسم و ذخیره در فازهای بعد فعال می‌شوند.</string>
+</resources>
