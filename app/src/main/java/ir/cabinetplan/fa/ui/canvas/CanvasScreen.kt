@@ -1,201 +1,139 @@
 package ir.cabinetplan.fa.ui.canvas
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.cabinetplan.fa.R
-import ir.cabinetplan.fa.domain.Point
-import ir.cabinetplan.fa.domain.Viewport
-import kotlin.math.ceil
-import kotlin.math.floor
+import ir.cabinetplan.fa.domain.*
 import kotlin.math.roundToInt
-
-private fun Int.persianDigits(): String = toString().map { char ->
-    if (char in '0'..'9') '۰' + (char - '0') else char
-}.joinToString("")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CanvasScreen(viewModel: CanvasViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val send = viewModel::onIntent
-    val zoom = (state.viewport.zoom * 100).roundToInt().persianDigits()
-
+    val editor = state.editor
+    var canvasBounds by remember { mutableStateOf(Rect.Zero) }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold)
-                        Text(stringResource(R.string.phase_label), style = MaterialTheme.typography.labelMedium)
+            Column {
+                TopAppBar(title = { Text(stringResource(R.string.app_name)) }, actions = {
+                    TextButton(onClick = { send(CanvasIntent.ShowHelp) }) { Text(stringResource(R.string.help)) }
+                })
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Tool.entries.filter { it != Tool.PLACE }.forEach { tool ->
+                        FilterChip(selected = editor.tool == tool, onClick = { send(CanvasIntent.SetTool(tool)) },
+                            label = { Text(stringResource(when (tool) {
+                                Tool.PAN -> R.string.tool_pan
+                                Tool.LINE -> R.string.tool_line
+                                else -> R.string.tool_select
+                            })) }, modifier = Modifier.padding(horizontal = 3.dp))
                     }
-                },
-                actions = {
-                    CanvasButton(R.string.help, R.string.help_symbol) { send(CanvasIntent.ShowHelp) }
-                },
-            )
+                    FilterChip(selected = state.libraryVisible, onClick = { send(CanvasIntent.ToggleLibrary) },
+                        label = { Text(stringResource(R.string.library)) })
+                }
+                if (state.libraryVisible) {
+                    Text(stringResource(R.string.library_hint), Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
+                    Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CabinetKind.entries.forEach { kind ->
+                            LibraryCard(kind, editor.tool == Tool.PLACE && editor.cabinet == kind,
+                                onClick = { send(CanvasIntent.ChooseCabinet(kind)) }, onDrop = { root ->
+                                    if (canvasBounds.contains(root)) {
+                                        val local = root - canvasBounds.topLeft
+                                        send(CanvasIntent.Place(kind, editor.viewport.screenToWorld(Point(local.x, local.y),
+                                            Point(canvasBounds.width / 2, canvasBounds.height / 2))))
+                                    }
+                                })
+                        }
+                    }
+                }
+            }
         },
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
-                Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text(stringResource(R.string.gesture_hint), style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        stringResource(R.string.phase_notice),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Column(Modifier.navigationBarsPadding()) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { send(CanvasIntent.Undo) }, enabled = editor.past.isNotEmpty()) { Text(stringResource(R.string.undo)) }
+                        TextButton(onClick = { send(CanvasIntent.Redo) }, enabled = editor.future.isNotEmpty()) { Text(stringResource(R.string.redo)) }
+                        TextButton(onClick = { send(CanvasIntent.Delete) }, enabled = editor.selected.isNotEmpty()) { Text(stringResource(R.string.delete_selected)) }
+                        FilterChip(selected = editor.multiple, onClick = { send(CanvasIntent.ToggleMultiple) }, label = { Text(stringResource(R.string.multiple)) })
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(selected = editor.gridSnap, onClick = { send(CanvasIntent.ToggleGrid) }, label = { Text(stringResource(R.string.snap_grid)) })
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(selected = editor.dimensions, onClick = { send(CanvasIntent.ToggleDimensions) }, label = { Text(stringResource(R.string.dimensions)) })
+                    }
+                    Text(stringResource(when (editor.tool) {
+                        Tool.PAN -> R.string.pan_hint
+                        Tool.LINE -> R.string.line_hint
+                        Tool.SELECT -> if (editor.multiple) R.string.multiple_hint else R.string.select_hint
+                        Tool.PLACE -> R.string.place_hint
+                    }), Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
                 }
             }
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            PlanCanvas(state.viewport, send, Modifier.fillMaxSize())
-            Surface(
-                modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 3.dp,
-            ) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text(stringResource(R.string.project_title), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        stringResource(R.string.grid_hint, Viewport.GRID_MILLIMETERS.persianDigits()),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-            Surface(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                shape = RoundedCornerShape(20.dp),
-                shadowElevation = 4.dp,
-                tonalElevation = 3.dp,
-            ) {
-                Row(
-                    Modifier.padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CanvasButton(R.string.zoom_in, R.string.zoom_in_symbol) { send(CanvasIntent.Zoom(1.25f)) }
-                    Text(
-                        stringResource(R.string.zoom_value, zoom),
-                        modifier = Modifier.widthIn(min = 56.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    CanvasButton(R.string.zoom_out, R.string.zoom_out_symbol) { send(CanvasIntent.Zoom(0.8f)) }
-                    CanvasButton(R.string.reset_view, R.string.reset_symbol) { send(CanvasIntent.ResetView) }
+            PlanCanvas(editor, send, Modifier.fillMaxSize()) { canvasBounds = it }
+            Surface(Modifier.align(Alignment.BottomCenter).padding(12.dp), tonalElevation = 4.dp, shape = MaterialTheme.shapes.large) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ZoomButton(R.string.zoom_in, R.string.zoom_in_symbol) { send(CanvasIntent.Zoom(1.25f)) }
+                    Text(stringResource(R.string.zoom_value, (editor.viewport.zoom * 100).roundToInt().fa()))
+                    ZoomButton(R.string.zoom_out, R.string.zoom_out_symbol) { send(CanvasIntent.Zoom(.8f)) }
+                    TextButton(onClick = { send(CanvasIntent.Fit(canvasBounds.width, canvasBounds.height)) }) { Text(stringResource(R.string.fit)) }
+                    ZoomButton(R.string.reset_view, R.string.reset_symbol) { send(CanvasIntent.ResetView) }
                 }
             }
         }
     }
-    if (state.helpVisible) {
-        AlertDialog(
-            onDismissRequest = { send(CanvasIntent.DismissHelp) },
-            title = { Text(stringResource(R.string.help_title)) },
-            text = { Text(stringResource(R.string.help_body), Modifier.verticalScroll(rememberScrollState())) },
-            confirmButton = {
-                TextButton(onClick = { send(CanvasIntent.DismissHelp) }) {
-                    Text(stringResource(R.string.understood))
-                }
-            },
-        )
-    }
+    if (state.helpVisible) AlertDialog(onDismissRequest = { send(CanvasIntent.DismissHelp) },
+        title = { Text(stringResource(R.string.help_title)) },
+        text = { Text(stringResource(R.string.help_body), Modifier.verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { send(CanvasIntent.DismissHelp) }) { Text(stringResource(R.string.understood)) } })
 }
 
 @Composable
-private fun CanvasButton(label: Int, symbol: Int, onClick: () -> Unit) {
+private fun ZoomButton(label: Int, symbol: Int, onClick: () -> Unit) {
     val description = stringResource(label)
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-            .semantics { contentDescription = description },
-    ) {
-        Text(stringResource(symbol), style = MaterialTheme.typography.headlineSmall)
+    TextButton(onClick = onClick, modifier = Modifier.sizeIn(minWidth = 48.dp).semantics { contentDescription = description }) {
+        Text(stringResource(symbol))
     }
 }
 
 @Composable
-private fun PlanCanvas(viewport: Viewport, send: (CanvasIntent) -> Unit, modifier: Modifier = Modifier) {
-    val gridColor = MaterialTheme.colorScheme.outlineVariant
-    val axisColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-    val originColor = MaterialTheme.colorScheme.primary
-    val description = stringResource(R.string.canvas_description)
-    val title = stringResource(R.string.canvas_title)
-    val zoomDescription = stringResource(
-        R.string.canvas_state, (viewport.zoom * 100).roundToInt().persianDigits(),
-    )
-    Canvas(
-        modifier.background(MaterialTheme.colorScheme.background)
-            .semantics {
-                contentDescription = "$title. $description"
-                stateDescription = zoomDescription
-            }
-            .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoom, _ ->
-                    send(
-                        CanvasIntent.Transform(
-                            centroid = Point(centroid.x - size.width / 2f, centroid.y - size.height / 2f),
-                            pan = Point(pan.x, pan.y),
-                            zoom = zoom,
-                        ),
-                    )
-                }
-            },
-    ) {
-        val center = Point(size.width / 2f, size.height / 2f)
-        val topLeft = viewport.screenToWorld(Point(), center)
-        val bottomRight = viewport.screenToWorld(Point(size.width, size.height), center)
-        val step = Viewport.GRID_MILLIMETERS.toFloat()
-        val firstX = floor(topLeft.x / step).toInt()
-        val lastX = ceil(bottomRight.x / step).toInt()
-        val firstY = floor(topLeft.y / step).toInt()
-        val lastY = ceil(bottomRight.y / step).toInt()
-        // Only visible grid lines are drawn; work remains bounded at minimum zoom.
-        for (index in firstX..lastX) {
-            val x = viewport.worldToScreen(Point(index * step, 0f), center).x
-            drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.dp.toPx())
+private fun LibraryCard(kind: CabinetKind, selected: Boolean, onClick: () -> Unit, onDrop: (Offset) -> Unit) {
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    var drag by remember { mutableStateOf(Offset.Zero) }
+    var dragging by remember { mutableStateOf(false) }
+    val drop by rememberUpdatedState(onDrop)
+    ElevatedCard(onClick = onClick, modifier = Modifier.widthIn(min = 140.dp)
+        .onGloballyPositioned { origin = it.boundsInRoot().topLeft }
+        .pointerInput(kind) {
+            detectDragGesturesAfterLongPress(onDragStart = { drag = origin + it; dragging = true },
+                onDragEnd = { drop(drag); dragging = false }, onDragCancel = { dragging = false },
+                onDrag = { change, amount -> change.consume(); drag += amount })
+        }, colors = CardDefaults.elevatedCardColors(containerColor = if (selected || dragging)
+            MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        Column(Modifier.padding(12.dp)) {
+            Text(stringResource(cabinetLabel(kind)), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.object_dimensions, kind.width.roundToInt().fa(), kind.depth.roundToInt().fa()),
+                style = MaterialTheme.typography.labelSmall)
         }
-        for (index in firstY..lastY) {
-            val y = viewport.worldToScreen(Point(0f, index * step), center).y
-            drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
-        }
-        val origin = viewport.worldToScreen(Point(), center)
-        drawLine(axisColor, Offset(origin.x, 0f), Offset(origin.x, size.height), 1.5.dp.toPx())
-        drawLine(axisColor, Offset(0f, origin.y), Offset(size.width, origin.y), 1.5.dp.toPx())
-        drawCircle(originColor, radius = 4.dp.toPx(), center = Offset(origin.x, origin.y))
     }
 }
