@@ -26,11 +26,34 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # Ubuntu 24.04 includes the Android command-line tools and SDK licenses.
+      # Use the runner's installed SDK without depending on sdkmanager being on PATH.
       - name: Install Android platform
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        shell: bash
+        run: |
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+          if [ -d "$sdk/platforms/android-35" ] && [ -d "$sdk/build-tools/35.0.0" ]; then
+            echo "Android 35 is already installed."
+            exit 0
+          fi
+          manager=$(find "$sdk/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -z "$manager" ]; then
+            echo "::error title=Android SDK missing::ANDROID_HOME=$sdk; SDK contents: $(ls -m "$sdk" 2>&1)"
+            exit 1
+          fi
+          set +e
+          "$manager" --sdk_root="$sdk" "platforms;android-35" "build-tools;35.0.0" > "$RUNNER_TEMP/sdk.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/sdk.log"
+          if [ "$result" -ne 0 ]; then
+            message=$(tail -30 "$RUNNER_TEMP/sdk.log")
+            message="${message//'%'/'%25'}"
+            message="${message//$'\n'/'%0A'}"
+            echo "::error title=SDK installation failed::$message"
+          fi
+          exit "$result"
       - name: Set up Gradle and validate wrapper
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Test, lint and assemble
         shell: bash
         run: |
