@@ -2,6 +2,8 @@ package ir.cabinetplan.fa.ui.canvas
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,7 +72,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
         },
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Text(stringResource(R.string.gesture_hint), style = MaterialTheme.typography.bodySmall)
                     Text(
                         stringResource(R.string.phase_notice),
@@ -123,7 +126,7 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
         AlertDialog(
             onDismissRequest = { send(CanvasIntent.DismissHelp) },
             title = { Text(stringResource(R.string.help_title)) },
-            text = { Text(stringResource(R.string.help_body)) },
+            text = { Text(stringResource(R.string.help_body), Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = {
                 TextButton(onClick = { send(CanvasIntent.DismissHelp) }) {
                     Text(stringResource(R.string.understood))
