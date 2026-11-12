@@ -1,0 +1,51 @@
+name: Android device smoke test
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  device:
+    name: Native PDF rendering on Android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Java 17
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Enable hardware acceleration
+        run: |
+          if [ ! -e /dev/kvm ]; then
+            echo "::error::This runner has no KVM device for Android emulator tests."
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
+      - name: Run native Android test
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash .github/scripts/gradle-check.sh connectedDebugAndroidTest
+      - name: Upload native test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-device-reports
+          path: |
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+          if-no-files-found: warn
+          retention-days: 14

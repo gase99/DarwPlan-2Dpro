@@ -9,7 +9,8 @@ def annotate(level, title, text):
 
 
 totals = dict(tests=0, failures=0, errors=0, skipped=0)
-for file in Path('app/build/test-results').rglob('TEST-*.xml'):
+files = list(Path('app/build/test-results').rglob('TEST-*.xml')) + list(Path('app/build/outputs/androidTest-results').rglob('TEST-*.xml'))
+for file in files:
     root = ET.parse(file).getroot()
     for key in totals:
         totals[key] += int(root.attrib.get(key, 0))
@@ -27,6 +28,3 @@ for file in Path('app/build/reports').glob('lint-results-*.xml'):
     for issue in ET.parse(file).getroot().findall('issue'):
         if issue.attrib.get('severity') in ('Fatal', 'Error'):
             annotate('error', issue.attrib.get('id', 'Lint'), issue.attrib.get('message', ''))
-# Export the generated schema through Checks once, so it can be committed for future migrations.
-for file in Path('app/schemas').rglob('*.json'):
-    annotate('notice', 'Room schema', file.read_text())

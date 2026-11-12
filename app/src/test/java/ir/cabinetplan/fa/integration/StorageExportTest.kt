@@ -43,20 +43,16 @@ class StorageExportTest {
         } finally { second.close(); context.deleteDatabase(name) }
     }
 
-    @Test fun `PNG and PDF contain real encoded output`() = runBlocking {
+    @Test fun `PNG contains a real decodable image`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val exporter = AndroidPlanExporter(context)
         val document = PlanDocument(CabinetKind.DRAWER.create(Point(-400f, 100f)))
         val png = File(context.cacheDir, "test.png")
-        val pdf = File(context.cacheDir, "test.pdf")
         try {
             exporter.write(Uri.fromFile(png), document, "طرح آزمایشی", ExportFormat.PNG)
             val image = requireNotNull(BitmapFactory.decodeFile(png.path))
             assertNotNull(image); assertEquals(2048, image.width); assertEquals(2048, image.height)
             image.recycle()
-            exporter.write(Uri.fromFile(pdf), document, "طرح آزمایشی", ExportFormat.PDF)
-            assertTrue(pdf.length() > 100)
-            assertEquals("%PDF", pdf.inputStream().use { String(ByteArray(4).also { bytes -> check(it.read(bytes) == 4) }, Charsets.US_ASCII) })
-        } finally { png.delete(); pdf.delete() }
+        } finally { png.delete() }
     }
 }

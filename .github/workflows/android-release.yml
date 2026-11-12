@@ -18,7 +18,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-tests:
+    uses: ./.github/workflows/android-device-test.yml
   release:
+    needs: native-tests
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
