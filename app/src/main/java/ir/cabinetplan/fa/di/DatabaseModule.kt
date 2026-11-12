@@ -10,10 +10,22 @@ import dagger.hilt.components.SingletonComponent
 import ir.cabinetplan.fa.data.ProjectDao
 import ir.cabinetplan.fa.data.ProjectDatabase
 import javax.inject.Singleton
+import ir.cabinetplan.fa.data.ProjectStore
+import ir.cabinetplan.fa.data.RoomProjectStore
+import ir.cabinetplan.fa.export.PlanExport
+import ir.cabinetplan.fa.export.AndroidPlanExporter
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+    @Provides
+    @Singleton
+    fun store(store: RoomProjectStore): ProjectStore = store
+
+    @Provides
+    @Singleton
+    fun exporter(exporter: AndroidPlanExporter): PlanExport = exporter
+
     @Provides
     @Singleton
     fun database(@ApplicationContext context: Context): ProjectDatabase =

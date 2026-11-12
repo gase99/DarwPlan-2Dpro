@@ -1,5 +1,10 @@
 package ir.cabinetplan.fa.ui.canvas
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import ir.cabinetplan.fa.export.ExportFormat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -30,12 +35,38 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
     val send = viewModel::onIntent
     val editor = state.editor
     var canvasBounds by remember { mutableStateOf(Rect.Zero) }
+    val snackbar = remember { SnackbarHostState() }
+    val defaultName = stringResource(R.string.project_title)
+    val message = state.message?.let { stringResource(it) }
+    LaunchedEffect(message) {
+        if (message != null) { snackbar.showSnackbar(message); send(CanvasIntent.ClearMessage) }
+    }
+    val png = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
+        if (uri != null) send(CanvasIntent.Export(uri, ExportFormat.PNG, defaultName))
+    }
+    val pdf = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null) send(CanvasIntent.Export(uri, ExportFormat.PDF, defaultName))
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             Column {
-                TopAppBar(title = { Text(stringResource(R.string.app_name)) }, actions = {
+                TopAppBar(title = {
+                    Column {
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+                        Text(state.projectName.ifBlank { defaultName } + if (state.dirty) stringResource(R.string.unsaved_mark) else "",
+                            style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+                }, actions = {
                     TextButton(onClick = { send(CanvasIntent.ShowHelp) }) { Text(stringResource(R.string.help)) }
                 })
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                    TextButton(onClick = { send(CanvasIntent.NewProject) }) { Text(stringResource(R.string.new_project)) }
+                    TextButton(onClick = { send(CanvasIntent.RequestSave) }) { Text(stringResource(R.string.save)) }
+                    TextButton(onClick = { send(CanvasIntent.Browse) }) { Text(stringResource(R.string.projects)) }
+                    TextButton(onClick = { png.launch("${state.projectName.ifBlank { defaultName }}.png") }, enabled = editor.document.lines.isNotEmpty()) { Text(stringResource(R.string.export_png)) }
+                    TextButton(onClick = { pdf.launch("${state.projectName.ifBlank { defaultName }}.pdf") }, enabled = editor.document.lines.isNotEmpty()) { Text(stringResource(R.string.export_pdf)) }
+                }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Tool.entries.filter { it != Tool.PLACE }.forEach { tool ->
@@ -102,6 +133,11 @@ fun CanvasScreen(viewModel: CanvasViewModel) {
             }
         }
     }
+    ProjectDialogs(state, send)
+    if (state.busy) AlertDialog(onDismissRequest = {},
+        text = { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            CircularProgressIndicator(Modifier.size(32.dp)); Text(stringResource(R.string.please_wait))
+        } }, confirmButton = {})
     if (state.helpVisible) AlertDialog(onDismissRequest = { send(CanvasIntent.DismissHelp) },
         title = { Text(stringResource(R.string.help_title)) },
         text = { Text(stringResource(R.string.help_body), Modifier.verticalScroll(rememberScrollState())) },

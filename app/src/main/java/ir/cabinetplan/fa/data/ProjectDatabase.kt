@@ -10,7 +10,7 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import kotlinx.coroutines.flow.Flow
 
-// Schema foundation only. Save/load UI and document serialization belong to phase 4.
+// Documents use a versioned JSON payload; Room manages project metadata and transactions.
 @Entity(tableName = "projects")
 data class ProjectEntity(
     @PrimaryKey val id: String,
@@ -23,6 +23,12 @@ data class ProjectEntity(
 interface ProjectDao {
     @Query("SELECT * FROM projects ORDER BY updatedAt DESC")
     fun observeProjects(): Flow<List<ProjectEntity>>
+
+    @Query("SELECT * FROM projects WHERE id = :id LIMIT 1")
+    suspend fun find(id: String): ProjectEntity?
+
+    @Query("DELETE FROM projects WHERE id = :id")
+    suspend fun delete(id: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(project: ProjectEntity)

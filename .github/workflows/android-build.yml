@@ -62,7 +62,7 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then
             # Make diagnostics accessible through the Checks API as well as raw logs.
-            message=$(tail -100 "$RUNNER_TEMP/gradle.log")
+            message=$( { grep -E "^e:|^\* What went wrong:|^> |^.*error:|FAILED|tests completed" "$RUNNER_TEMP/gradle.log" | head -60; tail -50 "$RUNNER_TEMP/gradle.log"; } )
             message="${message//'%'/'%25'}"
             message="${message//$'\r'/'%0D'}"
             message="${message//$'\n'/'%0A'}"
@@ -72,7 +72,7 @@ jobs:
       - name: Upload installable APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: CabinetPlan-FA-phase1-debug
+          name: CabinetPlan-FA-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -82,6 +82,8 @@ jobs:
         with:
           name: android-quality-reports
           path: |
+            app/schemas/
+            app/build/test-results/
             app/build/reports/tests/
             app/build/reports/lint-results-debug.*
           if-no-files-found: warn
