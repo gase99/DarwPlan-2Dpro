@@ -14,13 +14,26 @@ android {
         applicationId = "ir.cabinetplan.fa"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-phase1"
+        versionCode = 2
+        versionName = "0.1.0-preview.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fa")
     }
+    signingConfigs {
+        create("production") {
+            val path = System.getenv("CABINET_KEYSTORE_PATH")
+            if (!path.isNullOrBlank()) {
+                storeFile = file(path)
+                storePassword = System.getenv("CABINET_STORE_PASSWORD")
+                keyAlias = System.getenv("CABINET_KEY_ALIAS")
+                keyPassword = System.getenv("CABINET_KEY_PASSWORD")
+                storeType = System.getenv("CABINET_STORE_TYPE") ?: "JKS"
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("production")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -31,7 +44,10 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
@@ -57,5 +73,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
