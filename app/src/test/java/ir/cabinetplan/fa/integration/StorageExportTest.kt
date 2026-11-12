@@ -24,35 +24,55 @@ import org.robolectric.annotation.GraphicsMode
 @Config(application = Application::class, sdk = [28])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StorageExportTest {
-    @Test fun `Room survives reopening and preserves Persian project names`() = runBlocking {
+
+    @Test
+    fun `Room survives reopening and preserves Persian kitchen project and metadata`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val name = "test-${UUID.randomUUID()}.db"
-        fun open() = Room.databaseBuilder(context, ProjectDatabase::class.java, name).build()
-        val document = PlanDocument(CabinetKind.BASE.create(Point(-50f, 200f)))
-        val entity = ProjectEntity("test", "آشپزخانهٔ ایرانی", DocumentCodec.encode(document), 42)
-        val first = open()
-        try { RoomProjectStore(first.projectDao()).save(entity) } finally { first.close() }
-        val second = open()
+        val dbName = "test-${UUID.randomUUID()}.db"
+        fun openDb() = Room.databaseBuilder(context, ProjectDatabase::class.java, dbName).build()
+
+        val document = PRESET_PROJECTS.first().document
+        val entity = ProjectEntity("proj_1", "آشپزخانه مدرن ال", DocumentCodec.encode(document), 100L)
+
+        val first = openDb()
+        try {
+            RoomProjectStore(first.projectDao()).save(entity)
+        } finally {
+            first.close()
+        }
+
+        val second = openDb()
         try {
             val store = RoomProjectStore(second.projectDao())
-            assertEquals(entity, store.load(entity.id))
-            assertEquals(document, DocumentCodec.decode(store.load(entity.id)!!.documentJson))
+            val loaded = requireNotNull(store.load("proj_1"))
+            assertEquals(entity, loaded)
+            assertEquals(document, DocumentCodec.decode(loaded.documentJson))
             assertEquals(1, store.projects.first().size)
-            store.delete(entity.id)
-            assertNull(store.load(entity.id))
-        } finally { second.close(); context.deleteDatabase(name) }
+            store.delete("proj_1")
+            assertNull(store.load("proj_1"))
+        } finally {
+            second.close()
+            context.deleteDatabase(dbName)
+        }
     }
 
-    @Test fun `PNG contains a real decodable image`() = runBlocking {
+    @Test
+    fun `PNG export writes high resolution architectural blueprint image`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val exporter = AndroidPlanExporter(context)
-        val document = PlanDocument(CabinetKind.DRAWER.create(Point(-400f, 100f)))
-        val png = File(context.cacheDir, "test.png")
+        val document = PRESET_PROJECTS.first().document
+        val png = File(context.cacheDir, "blueprint-test.png")
         try {
-            exporter.write(Uri.fromFile(png), document, "طرح آزمایشی", ExportFormat.PNG)
-            val image = requireNotNull(BitmapFactory.decodeFile(png.path))
-            assertNotNull(image); assertEquals(2048, image.width); assertEquals(2048, image.height)
-            image.recycle()
-        } finally { png.delete() }
+            exporter.write(Uri.fromFile(png), document, "آشپزخانه سعادت‌آباد", ExportFormat.PNG)
+            val bitmap = requireNotNull(BitmapFactory.decodeFile(png.path))
+            try {
+                assertEquals(AndroidPlanExporter.PNG_WIDTH, bitmap.width)
+                assertEquals(AndroidPlanExporter.PNG_HEIGHT, bitmap.height)
+            } finally {
+                bitmap.recycle()
+            }
+        } finally {
+            png.delete()
+        }
     }
 }
