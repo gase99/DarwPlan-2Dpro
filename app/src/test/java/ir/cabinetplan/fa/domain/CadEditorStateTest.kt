@@ -69,13 +69,13 @@ class CadEditorStateTest {
     @Test
     fun `front elevation view selects cabinet by front projection bounds`() {
         val preset = PRESET_PROJECTS.first().document
-        val firstCab = preset.cabinets.first()
-        val elevY = CadEditorState.ELEVATION_FLOOR_Y - firstCab.elevationCm - firstCab.height / 2f
+        val targetCab = preset.cabinets.first { it.id == "cab_5" }
+        val elevY = CadEditorState.ELEVATION_FLOOR_Y - targetCab.elevationCm - targetCab.height / 2f
         val state = CadEditorState(
             document = preset,
             viewMode = ViewMode.ELEVATION_FRONT,
-        ).beginGesture(Point(firstCab.x + firstCab.width / 2f, elevY), snapRadiusCm = 8f)
+        ).beginGesture(Point(targetCab.x + targetCab.width / 2f, elevY), snapRadiusCm = 8f)
 
-        assertEquals(setOf(firstCab.id), state.selectedCabinetIds)
+        assertEquals(setOf(targetCab.id), state.selectedCabinetIds)
     }
 }
