@@ -1,9 +1,11 @@
 <resources>
-    <style name="Theme.CabinetPlan" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:colorAccent">#176B57</item>
+    <style name="Theme.CabinetPlan" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#0F141C</item>
+        <item name="android:navigationBarColor">#1A2230</item>
+        <item name="android:colorAccent">#E09F3E</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowBackground">#F7F9F5</item>
+        <item name="android:windowBackground">#0F141C</item>
     </style>
 </resources>
